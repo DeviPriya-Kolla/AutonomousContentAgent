@@ -1,6 +1,8 @@
 # agent.py
 
 import os
+import csv
+from datetime import datetime
 import feedparser
 import google.generativeai as genai
 from dotenv import load_dotenv
@@ -12,13 +14,14 @@ from bs4 import BeautifulSoup
 
 # --- Load Environment ---
 load_dotenv()
+# Make sure GEMINI_API_KEY is in your .env file
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 model = genai.GenerativeModel("models/gemini-1.5-flash")
 
 # --- 1. Tool Functions: The agent's capabilities ---
 
-def get_recent_articles(feed_url, num_articles=10):
+def get_recent_articles(feed_url, num_articles=2):
     """
     Parses a given RSS feed and returns a list of the most recent articles.
     Each article in the list is an object with .title and .link attributes.
@@ -26,34 +29,30 @@ def get_recent_articles(feed_url, num_articles=10):
     print(f"🤖 Checking feed for the latest {num_articles} articles: {feed_url}")
     feed = feedparser.parse(feed_url)
     if feed.entries:
-        # Return the 10 most recent entries
         return feed.entries[:num_articles]
-    return [] # Return an empty list if the feed is empty or fails
+    return []
 
-# --- This function is for summarizing the content ---
 def get_article_summary(url):
     """Scrapes the first few paragraphs of an article."""
     try:
         print(f"🔎 Scraping summary from {url}...")
-        # Use a common user-agent to avoid being blocked
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
-        response = requests.get(url, headers=headers, timeout=10) # Add a timeout
-        response.raise_for_status() # Raise an exception for bad status codes
+        response = requests.get(url, headers=headers, timeout=10)
+        response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Find all paragraph tags (<p>) and join the text of the first 3
         paragraphs = soup.find_all('p')
-        summary = ' '.join([p.get_text() for p in paragraphs[:3]])
+        summary = ' '.join([p.get_text() for p in paragraphs[:5]]) # Increased to 5 paragraphs for better context
         
-        # A simple check to ensure we got meaningful content
         if len(summary.strip()) < 50:
+            print("⚠️ Summary was too short, likely a cookie banner or error page.")
             return None 
 
         return summary
     except Exception as e:
         print(f"⚠️ Could not scrape summary for {url}: {e}")
-        return None # Return None if scraping fails for any reason
+        return None
 
 def is_article_relevant(title, summary):
     """
@@ -61,11 +60,10 @@ def is_article_relevant(title, summary):
     """
     print(f"🤔 Checking relevance of '{title}'...")
 
-    if not summary: # Fallback if scraping failed
+    if not summary:
         summary = "No summary available."
 
     try:
-        # We use a very specific, directive prompt for a simple Yes/No answer
         prompt = f"""
         You are a news editor's assistant. Your job is to decide if an article is important enough to be featured on social media.
         Consider if the topic is a major product launch, a significant industry event, a major breakthrough, or a widely impactful story.
@@ -80,34 +78,44 @@ def is_article_relevant(title, summary):
         """
 
         response = model.generate_content(prompt)
-        
-        # Clean up the response to be safe
         decision = response.text.strip().lower()
         print(f"🧠 Relevance decision: {decision}")
 
-        if 'yes' in decision:
-            return True
-        else:
-            return False
+        return 'yes' in decision
             
     except Exception as e:
         print(f"⚠️ Could not determine relevance due to an error: {e}")
-        # Default to False to be safe and avoid wasting API calls
         return False
 
 def has_been_seen(article_link):
-    """Checks if an article link is already in our 'seen' file."""
+    """Checks if an article link is already in our CSV log."""
     try:
-        with open(config.SEEN_ARTICLES_FILE, 'r') as f:
-            seen_links = f.read().splitlines()
-        return article_link in seen_links
+        with open(config.SEEN_ARTICLES_FILE, 'r', newline='', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if len(row) > 2 and row[2] == article_link:
+                    return True
+        return False
     except FileNotFoundError:
         return False
 
-def mark_as_seen(article_link):
-    """Adds a new article link to our 'seen' file."""
-    with open(config.SEEN_ARTICLES_FILE, 'a') as f:
-        f.write(article_link + '\n')
+def mark_as_seen(article_link, article_title):
+    """Adds a new article's info as a row in our CSV log."""
+    header = ['timestamp', 'title', 'link']
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    new_row = [timestamp, article_title, article_link]
+
+    try:
+        with open(config.SEEN_ARTICLES_FILE, 'r', newline='', encoding='utf-8') as f:
+            file_exists = f.read().strip() != ''
+    except FileNotFoundError:
+        file_exists = False
+
+    with open(config.SEEN_ARTICLES_FILE, 'a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(header)
+        writer.writerow(new_row)
 
 def get_brand_voice():
     """Reads the brand voice instructions from the file."""
@@ -116,19 +124,13 @@ def get_brand_voice():
 
 def draft_post_with_llm(title, summary, brand_voice, max_retries=4):
     """
-    Uses Google Gemini to draft a social media thread with a dynamic,
-    exponential backoff retry mechanism.
+    Uses Google Gemini to draft a social media thread with an exponential backoff retry mechanism.
     """
     print("🤖 Asking Gemini to draft a thread...")
-    
-    # --- DYNAMIC BACKOFF CONFIGURATION ---
-    # Start with a 15-second wait. This can be tuned.
     backoff_seconds = 15
     
     prompt = f"""
-    You are an expert social media manager.
-    
-    Your goal is to draft a complete, ready-to-publish Twitter/X thread based on the following article title and brand voice guidelines.
+    You are an expert social media manager. Your goal is to draft a complete, ready-to-publish Twitter/X thread based on the article title and summary.
 
     Article Title: "{title}"
     Article Summary: "{summary if summary else 'No summary available.'}"
@@ -141,37 +143,21 @@ def draft_post_with_llm(title, summary, brand_voice, max_retries=4):
     Please generate the thread now.
     """
 
-    # --- THE RETRY LOOP ---
     for attempt in range(1, max_retries + 1):
         try:
             response = model.generate_content(prompt)
-            # If we get here, the call was successful!
             return response.text
-            
         except ResourceExhausted as e:
-            # This is the specific error for rate limiting.
-            
-            # Check if this was our last attempt.
             if attempt == max_retries:
-                print(f"❌ Final attempt failed. Giving up on this article.")
-                # We'll return None to signal failure gracefully.
+                print("❌ Final attempt failed. Giving up on this article.")
                 return None 
             
-            print(f"⚠️ Rate limit hit (attempt {attempt}/{max_retries}). "
-                  f"Waiting {backoff_seconds} seconds before retrying...")
-            
+            print(f"⚠️ Rate limit hit (attempt {attempt}/{max_retries}). Waiting {backoff_seconds} seconds...")
             time.sleep(backoff_seconds)
-            
-            # Double the wait time for the next attempt, with a cap.
             backoff_seconds *= 2
-            
         except Exception as e:
-            # Catch any other unexpected errors (e.g., network issues)
-            print(f"An unexpected error occurred: {e}")
-            # We'll also return None for other failures to prevent the agent from crashing.
+            print(f"An unexpected error occurred during drafting: {e}")
             return None
-
-    # This part of the code should ideally not be reached, but as a fallback:
     return None
 
 # --- 2. The Main Agentic Loop ---
@@ -179,68 +165,50 @@ def draft_post_with_llm(title, summary, brand_voice, max_retries=4):
 def run_agent():
     print("--- Running Content Strategist Agent ---")
     
-    # Get the brand voice once at the start
-    print("🎨 Reading brand voice guidelines...")
     brand_voice = get_brand_voice()
 
-    # Loop through each feed URL from our config
     for url in config.RSS_FEED_URLS:
-        
-        # 1. Perceive a BATCH of recent articles
         recent_articles = get_recent_articles(url)
 
         if not recent_articles:
             print(f"⚠️ No articles found for {url}. Skipping.")
             continue
         
-        # Reverse the list so we process the oldest new article first
         recent_articles.reverse()
 
-        # 2. Loop through each individual article in the batch
         for article in recent_articles:
             article_title = article.title
             article_link = article.link
 
-            # 1. Check Memory for EACH article
             if has_been_seen(article_link):
-                # We've seen this one, so we can assume anything before it is also seen.
-                # No need to print, this is normal behavior.
-                continue # Move to the next article in the list
+                continue
             
-            # 2. GATHER CONTEXT (Scrape First!)
             summary = get_article_summary(article_link)
             
-            # 3. SMART FILTER
             if not is_article_relevant(article_title, summary):
                 print("❌ Article deemed not significant. Skipping and marking as seen.")
-                mark_as_seen(article_link) # IMPORTANT: Mark as seen to avoid re-checking
-                continue # Move to the next article
+                # --- FIX #1: Added 'article_title' to the call below ---
+                mark_as_seen(article_link, article_title)
+                continue
 
-            # If we get here, the article is NEW!
-            print(f"✨ New article found! Processing '{article_title}'...")
-            # After confirming an article is new and relevant
+            print(f"✨ New and relevant article found! Processing '{article_title}'...")
 
-            # 4. Think & Act
             draft = draft_post_with_llm(article_title, summary, brand_voice)
             
-            # --- NEW CHECK FOR FAILED DRAFT ---
             if not draft:
                 print(f"🤷‍♂️ Skipping article '{article_title}' due to drafting failure.")
-                mark_as_seen(article_link) 
-                # Use 'continue' to immediately jump to the next article in the for loop
+                # --- FIX #2: Added 'article_title' to the call below ---
+                mark_as_seen(article_link, article_title) 
                 continue
-            # --- END OF NEW CHECK ---
             
             print("\n--- 🚀 DRAFT COMPLETE ---")
             print(draft)
             print("----------------------\n")
 
-            # 5. Update Memory
-            mark_as_seen(article_link)
-            print(f"📝 Marked '{article_title}' as seen.")
+            mark_as_seen(article_link, article_title)
+            print(f"📝 Marked '{article_title}' as seen in the CSV log.")
     
     print("--- Agent run complete ---")
 
-# This makes the script runnable from the command line
 if __name__ == "__main__":
     run_agent()

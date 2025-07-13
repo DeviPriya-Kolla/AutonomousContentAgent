@@ -15,7 +15,7 @@ RSS_FEED_URLS = [
 ]
 
 # The file to store links of articles we've already seen
-SEEN_ARTICLES_FILE = "seen_articles.txt"
+SEEN_ARTICLES_FILE = "seen_articles.csv"
 
 # The file that defines the agent's personality
 BRAND_VOICE_FILE = "brand_voice.txt"
