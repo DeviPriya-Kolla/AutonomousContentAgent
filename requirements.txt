@@ -1,0 +1,6 @@
+# requirements.txt
+google-generativeai
+feedparser
+python-dotenv
+beautifulsoup4
+requests

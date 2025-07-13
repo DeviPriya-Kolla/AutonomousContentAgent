@@ -1,0 +1,41 @@
+# --- General Python ---
+# Byte-compiled / optimized / C-extensions
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- Virtual Environments ---
+# The entire virtual environment folder
+venv/
+.venv/
+env/
+.env/
+venv.bak/
+.env.bak/
+
+# --- Environment Variables ---
+# Your secret API keys and configuration
+.env
+.env.*
+
+# --- Project-Specific Files ---
+# The log of articles you have already seen
+seen_articles.txt
+
+# Any log files you might create for debugging the scheduler
+*.log
+
+# --- IDE / Editor Specific ---
+# VS Code
+.vscode/
+
+# PyCharm
+.idea/
+
+# --- Operating System Specific ---
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db

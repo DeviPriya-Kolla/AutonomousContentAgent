@@ -1,0 +1,11 @@
+The agent will operate in a simple, linear workflow.
+Start: The main script (agent.py) is executed.
+Perceive (Check for News): The agent fetches the latest article from a specified RSS feed.
+Check Memory (Have I seen this?): It compares the article's link to a list of links it has already processed.
+If Yes: The agent stops. The work is done for this run.
+If No: The agent proceeds. This is a new content opportunity!
+Perceive (Get Context): The agent reads the brand_voice.txt file to understand how it should write.
+Think (Draft Content): The agent sends the article title and the brand voice instructions to the LLM and asks it to draft a post.
+Act (Present Output): The agent prints the generated draft to the console.
+Update Memory: The agent adds the new article's link to its list of processed links so it doesn't process it again.
+End: The script finishes.
