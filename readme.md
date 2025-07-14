@@ -1,129 +1,131 @@
 # Autonomous Content Strategist Agent
 
-This project is an intelligent autonomous agent designed to act as a social media content strategist. It automates the entire content discovery and creation pipeline: monitoring news sources, deciding what's important, scraping for context, and drafting on-brand social media content for human approval.
+[![Live App](https://img.shields.io/badge/Live_App-Visit_Dashboard-brightgreen)](https://autonomouscontentagent.onrender.com) <!-- Replace with your actual Render URL -->
 
-This agent demonstrates a sophisticated `Perceive -> Orient -> Decide -> Act -> Report` loop, making it an excellent example of practical agentic AI.
+This project is an intelligent autonomous agent and a full-stack web application. The backend agent automates the entire content discovery and creation pipeline, while the live web dashboard provides a user-friendly interface to monitor the agent's activity.
+
+The project demonstrates a sophisticated `Perceive -> Orient -> Decide -> Act -> Report` loop, making it an excellent example of a practical, deployed agentic AI system.
 
 ## Key Features
 
--   **Intelligent Perception:**
+-   **Intelligent Backend Agent:**
     -   **Multi-Source Monitoring:** Actively monitors a list of user-defined RSS feeds for new content.
-    -   **Content Scraping:** Scrapes the source article to get a summary, providing deeper context than a title alone.
--   **Advanced Decision Making:**
-    -   **LLM-Powered Relevance Filter:** Uses a fast, low-cost LLM call to decide if an article is "significant" enough to post about, ignoring minor updates or fluff.
-    -   **Agentic Memory:** Logs all processed articles (both successful and skipped) in a structured `seen_articles.csv` file to avoid duplicate work and provide a clear audit trail.
--   **Sophisticated Action-Taking:**
-    -   **Brand Voice Awareness:** Reads a `brand_voice.txt` file to learn and adopt a specific personality, tone, and formatting for all generated content.
-    -   **Automated Content Creation:** Generates multi-part Twitter/X style threads complete with relevant hashtags.
+    -   **Content Scraping:** Scrapes source articles to get a summary for deeper context.
+    -   **LLM-Powered Relevance Filter:** Uses a fast LLM call to decide if an article is "significant" enough to post about.
+    -   **Agentic Memory:** Logs all processed articles in a structured `seen_articles.csv` file, providing a clear audit trail.
+    -   **Automated Content Creation:** Generates multi-part Twitter/X style threads with relevant hashtags in a specific brand voice.
+
+-   **Web Dashboard & UI:**
+    -   **Flask Front-End:** A clean web interface for interacting with the agent's data.
+    -   **Live & Deployed:** The web application is deployed on a cloud platform (Render) and is accessible via a public URL.
+    -   **Activity Log Dashboard:** A dedicated page that displays the `seen_articles.csv` log in a readable table, showing all of the agent's past actions.
+
 -   **The Handoff Protocol (Notification System):**
-    -   **Automated Delivery:** Instead of just printing to a console, the agent dispatches completed drafts directly to configured **Slack** and/or **Discord** channels for final human review and approval.
-    -   **Robust & Redundant:** Can be configured to notify multiple platforms simultaneously.
--   **Automated & Reliable Execution:**
-    -   **Scheduled Runs:** Designed to be fully automated using **GitHub Actions**, `cron`, or Windows Task Scheduler.
+    -   **Automated Delivery:** The agent dispatches completed drafts directly to configured **Slack** and/or **Discord** channels for final human review.
+
+-   **Production-Ready & Automated:**
+    -   **Cloud-Native Deployment:** The backend agent runs on a schedule via **GitHub Actions**, and the frontend is deployed as a persistent web service.
+    -   **Production Web Server:** Uses **Gunicorn** for a robust, production-ready frontend deployment.
     -   **Rate Limit Handling:** Includes an exponential backoff retry mechanism to gracefully handle API rate limits.
 
 ## Demo Output
 
-Here is an example of a notification sent after the agent found, scraped, and processed a relevant article:
+The agent delivers its work via notifications. Here is an example of a notification sent to Discord:
 ### Discord Notification
 ![Example notification sent to Discord](screenshots/Discord.png)
 
 ### Slack Notification
 ![Example notification sent to Slack](screenshots/Slack.png)
-<!-- It's highly recommended to replace this with a real screenshot of your agent's output! -->
 
 ## Tech Stack
 
--   **Language:** Python 3.8+
--   **LLM "Brain":** Google Gemini API (`models/gemini-1.5-flash`)
+-   **Backend:** Python 3.8+, Google Gemini API
+-   **Frontend:** Flask (Python Web Framework), HTML, CSS
+-   **Deployment:** Gunicorn (WSGI Server), Render (Cloud Hosting), GitHub Actions (CI/CD)
 -   **Core Libraries:**
-    -   `google-generativeai`: The official Python client for the Google AI SDK.
-    -   `feedparser`: For robust and simple parsing of RSS feeds.
-    -   `requests`: For making HTTP requests to scrape articles and send webhook notifications.
-    -   `beautifulsoup4`: For parsing HTML content from scraped articles.
-    -   `python-dotenv`: To manage environment variables for API keys and webhooks.
+    -   `google-generativeai`, `feedparser`, `requests`, `beautifulsoup4`, `python-dotenv`, `Flask`, `gunicorn`
 
 ## Project Structure
 
 ```
 /autonomous-content-agent/
 |
-|-- .github/workflows/run_agent.yml  # GitHub Actions workflow for automation
-|-- .venv/                           # Python virtual environment folder
+|-- .github/workflows/run_agent.yml
+|-- templates/
+|   |-- landing_page.html
+|   |-- dashboard.html
+|-- .venv/
 |
-|-- .env                             # Stores secret API keys & webhook URLs (ignored by Git)
-|-- .gitignore                       # Specifies files for Git to ignore
+|-- .env
+|-- .gitignore
+|-- Procfile                       # Command for the production web server
 |
-|-- agent.py                         # Main script with the agent's logic
-|-- config.py                        # Configuration settings (RSS feeds, file paths)
-|-- brand_voice.txt                  # Defines the agent's personality and tone
+|-- app.py                         # The Flask web server application
+|-- agent.py                       # The backend autonomous agent script
+|-- config.py
+|-- brand_voice.txt
 |
-|-- requirements.txt                 # List of required Python libraries
-|-- seen_articles.csv                # Structured log of all processed articles
+|-- requirements.txt
+|-- seen_articles.csv
 ```
 
-## Getting Started
+## Getting Started & Deployment
 
-Follow these steps to set up and run the project.
+### 1. Local Setup
 
-### 1. Prerequisites
-
--   Python 3.8 or higher.
--   A Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
--   (Optional) A Slack or Discord Webhook URL for notifications.
-
-### 2. Clone the Repository
+First, set up and run the project on your local machine for testing.
 
 ```bash
+# Clone the repository
 git clone https://github.com/your-username/autonomous-content-agent.git
 cd autonomous-content-agent
-```
 
-### 3. Set Up a Virtual Environment
-
-```bash
-# Create the virtual environment
+# Create and activate a virtual environment
 python -m venv venv
+# On Windows: venv\Scripts\activate
+# On macOS/Linux: source venv/bin/activate
 
-# Activate it
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-### 4. Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 5. Configure the Agent
+### 2. Configuration
 
-1.  **Create the `.env` file:** Create a file named `.env` in the project's root folder.
-2.  **Add your secrets:** Add your API key and any optional webhook URLs to the `.env` file. Leave a URL blank if you don't want to use that service.
+1.  **Create `.env` file:** Create a `.env` file in the project's root folder.
+2.  **Add your secrets:** Add your API key and any optional webhook URLs.
     ```
     GEMINI_API_KEY="Your-Google-API-Key-Here"
     SLACK_WEBHOOK_URL="Your-Slack-Webhook-URL-Here"
     DISCORD_WEBHOOK_URL="Your-Discord-Webhook-URL-Here"
     ```
-3.  **Customize RSS Feeds:** Open `config.py` and modify the `RSS_FEED_URLS` list.
-4.  **Define Your Brand Voice:** Edit `brand_voice.txt` to describe the personality and formatting rules you want the agent to follow.
+3.  **Customize Config:** Open `config.py` to set your RSS feeds and `brand_voice.txt` to define the agent's tone.
 
-### 6. Run the Agent Manually
+### 3. Running Locally
 
-You are now ready to run the agent for a test!
+This application has two parts. For local testing, you can run them in two separate terminals.
 
-```bash
-python agent.py
-```
+-   **Run the Backend Agent (Terminal 1):**
+    ```bash
+    python agent.py
+    ```
+-   **Run the Frontend Web Server (Terminal 2):**
+    ```bash
+    python app.py
+    ```
+    Now, visit `http://127.0.0.1:5000` in your browser.
 
-The agent will check the feeds, process any new and relevant articles, send notifications, and update its `seen_articles.csv` log.
+### 4. Deployment to the Cloud
 
-### 7. Automate with GitHub Actions
+This project is configured for a full cloud deployment.
 
-This project is ready for cloud automation.
+1.  **Deploy the Frontend (Render):**
+    -   Push your code to a GitHub repository.
+    -   Create a new **Web Service** on [Render](https://render.com), connecting it to your repository.
+    -   Render will automatically use the `Procfile` to run `gunicorn app:app`.
+    -   In the Render dashboard, add your `GEMINI_API_KEY` and other secrets as **Environment Variables**.
+    -   Your web app will be live on a public URL.
 
-1.  Push your code to a GitHub repository.
-2.  In your repository's **Settings > Secrets and variables > Actions**, add your `GEMINI_API_KEY`, `SLACK_WEBHOOK_URL`, and `DISCORD_WEBHOOK_URL` as repository secrets.
-3.  The workflow defined in `.github/workflows/run_agent.yml` will automatically run every hour. You can also trigger it manually from the "Actions" tab in your repository.
+2.  **Automate the Backend (GitHub Actions):**
+    -   The workflow in `.github/workflows/run_agent.yml` is configured to run the `agent.py` script every hour.
+    -   It automatically commits the updated `seen_articles.csv` file back to the repository.
+    -   Render will detect this change and automatically re-deploy your web app, ensuring the dashboard is always up-to-date with the latest agent activity.

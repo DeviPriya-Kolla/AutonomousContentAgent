@@ -1,27 +1,16 @@
+# .github/workflows/run_agent.yml
+
 name: Run Content Strategist Agent
 
 on:
-  # 🔁 Run on every push to any branch (you can limit to 'main' if needed)
-  push:
-    branches:
-      - main  # Or use `- '*'` to trigger on all branches
-
-  # 📥 Run on pull requests to main branch
-  pull_request:
-    branches:
-      - main
-
-  # 🕒 Scheduled run every hour
   schedule:
-    - cron: '0 * * * *'
-
-  # ▶️ Manual trigger from the Actions tab
-  workflow_dispatch:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch: # Allows manual runs
 
 jobs:
   run-agent:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
@@ -39,4 +28,16 @@ jobs:
       - name: Run Python Agent
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python agent.py
+        
+      # --- NEW STEPS TO COMMIT THE CSV FILE ---
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions-bot@github.com"
+          git add seen_articles.csv
+          # The next line only commits if there are changes to the file
+          git diff --quiet && git diff --staged --quiet || git commit -m "docs: Update seen articles log"
+          git push
