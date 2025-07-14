@@ -8,6 +8,7 @@ load_dotenv() # This loads the variables from .env
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
+DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
 
 # The list of RSS feeds you want to monitor
 RSS_FEED_URLS = [
