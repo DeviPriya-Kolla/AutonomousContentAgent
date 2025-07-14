@@ -24,8 +24,12 @@ This agent demonstrates a sophisticated `Perceive -> Orient -> Decide -> Act -> 
 
 ## Demo Output
 
-Here is an example of a notification sent to Discord after the agent found, scraped, and processed a relevant article:
+Here is an example of a notification sent after the agent found, scraped, and processed a relevant article:
+### Discord Notification
+![Example notification sent to Discord](screenshots/Discord.png)
 
+### Slack Notification
+![Example notification sent to Slack](screenshots/Slack.png)
 <!-- It's highly recommended to replace this with a real screenshot of your agent's output! -->
 
 ## Tech Stack
