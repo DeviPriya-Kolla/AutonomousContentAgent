@@ -121,6 +121,42 @@ def get_brand_voice():
     """Reads the brand voice instructions from the file."""
     with open(config.BRAND_VOICE_FILE, 'r') as f:
         return f.read()
+    
+
+def send_to_slack(message_text):
+    """Sends a message to a Slack channel using a webhook."""
+    if not config.SLACK_WEBHOOK_URL:
+        print("⚠️ Slack webhook URL not configured. Skipping notification.")
+        return
+
+    # Format the message for Slack's API (using "blocks" for better formatting)
+    payload = {
+        "blocks": [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": "🚀 New Content Draft Ready for Approval!",
+                    "emoji": True
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": message_text
+                }
+            }
+        ]
+    }
+    
+    print("📢 Sending draft to Slack...")
+    try:
+        response = requests.post(config.SLACK_WEBHOOK_URL, json=payload)
+        response.raise_for_status() # This will raise an error for bad responses (4xx or 5xx)
+        print("✅ Successfully sent to Slack.")
+    except requests.exceptions.RequestException as e:
+        print(f"❌ Failed to send to Slack: {e}")
 
 def draft_post_with_llm(title, summary, brand_voice, max_retries=4):
     """
@@ -201,9 +237,15 @@ def run_agent():
                 mark_as_seen(article_link, article_title) 
                 continue
             
-            print("\n--- 🚀 DRAFT COMPLETE ---")
-            print(draft)
-            print("----------------------\n")
+            # Instead of printing the draft to the console...
+            # print("\n--- 🚀 DRAFT COMPLETE ---")
+            # print(draft)
+            # print("----------------------\n")
+
+            # ...we now send it to Slack for approval.
+            # We can also enhance the message with the article link for context.
+            message_for_slack = f"*{article_title}*\n\n{draft}\n\nSource: <{article_link}|Read original article>"
+            send_to_slack(message_for_slack)
 
             mark_as_seen(article_link, article_title)
             print(f"📝 Marked '{article_title}' as seen in the CSV log.")
