@@ -21,7 +21,7 @@ venv.bak/
 
 # --- Project-Specific Files ---
 # The log of articles you have already seen
-seen_articles.csv
+#seen_articles.csv
 
 # Any log files you might create for debugging the scheduler
 *.log
