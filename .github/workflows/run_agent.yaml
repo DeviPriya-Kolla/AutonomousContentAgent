@@ -19,10 +19,16 @@ jobs:
   run-agent:
     runs-on: ubuntu-latest
     
+    # --- NEW PERMISSIONS BLOCK ---
+    # This grants the GITHUB_TOKEN write permissions for this job
+    permissions:
+      contents: write 
+    
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
         
+      # ... the rest of your steps remain exactly the same ...
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -39,13 +45,6 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python agent.py
-        
-      # --- NEW DEBUGGING STEP ---
-      - name: "Debug: Show .gitignore contents"
-        run: |
-          echo "--- Contents of .gitignore ---"
-          cat .gitignore
-          echo "------------------------------"
         
       - name: Commit and push changes
         run: |
