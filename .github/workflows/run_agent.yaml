@@ -3,8 +3,16 @@
 name: Run Content Strategist Agent
 
 on:
+  # NEW: Trigger the workflow on every push to the 'main' branch
+  push:
+    branches:
+      - main
+
+  # Existing Trigger 1: On a schedule
   schedule:
     - cron: '0 * * * *' # Runs every hour
+
+  # Existing Trigger 2: Manually
   workflow_dispatch: # Allows manual runs
 
 jobs:
@@ -32,12 +40,17 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         run: python agent.py
         
-      # --- NEW STEPS TO COMMIT THE CSV FILE ---
+      # --- NEW DEBUGGING STEP ---
+      - name: "Debug: Show .gitignore contents"
+        run: |
+          echo "--- Contents of .gitignore ---"
+          cat .gitignore
+          echo "------------------------------"
+        
       - name: Commit and push changes
         run: |
           git config --global user.name "GitHub Actions Bot"
           git config --global user.email "actions-bot@github.com"
           git add seen_articles.csv
-          # The next line only commits if there are changes to the file
           git diff --quiet && git diff --staged --quiet || git commit -m "docs: Update seen articles log"
           git push
